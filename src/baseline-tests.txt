@@ -1,0 +1,26 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-7.4.4, pluggy-1.4.0 -- /usr/bin/python
+cachedir: .pytest_cache
+rootdir: /home/vinodkumar/Work/University/5th/SQE/Assingment 1/Py-Desktop-Expense_Tracker/src
+collecting ... collected 0 items / 1 error
+
+==================================== ERRORS ====================================
+________________ ERROR collecting tests/test_expense_tracker.py ________________
+ImportError while importing test module '/home/vinodkumar/Work/University/5th/SQE/Assingment 1/Py-Desktop-Expense_Tracker/src/tests/test_expense_tracker.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/lib/python3.12/importlib/__init__.py:90: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+__init__.py:1: in <module>
+    from .gui import ExpenseTrackerView
+gui.py:3: in <module>
+    from preferences import Preferences
+preferences.py:3: in <module>
+    from data import DB_FILE
+data.py:3: in <module>
+    import pandas as pd
+E   ModuleNotFoundError: No module named 'pandas'
+=========================== short test summary info ============================
+ERROR tests/test_expense_tracker.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+=============================== 1 error in 0.09s ===============================

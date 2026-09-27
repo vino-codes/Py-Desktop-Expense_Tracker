@@ -1,168 +1,145 @@
-import pandas as pd
-import matplotlib.pyplot as plt
-from tkinter import filedialog
-from data import ExpenseModel
-from datetime import datetime, date
 import sqlite3
+from datetime import datetime
+
+from data import ExpenseModel
 
 class ExpenseTrackerController:
     def __init__(self):
+        """Create the controller and its expense model."""
         self.model = ExpenseModel()
         
     def validate_date(self, date_str):
-        """
-        Validate and normalize the date format to '%Y-%m-%d'.
-        
-        Args:
-        - date_str (str): Date string in format '%Y-%m-%d'.
-        
-        Returns:
-        - str: Validated date string in format '%Y-%m-%d'.
-        
-        Raises:
-        - ValueError: If date format is not valid.
-        """
+        """Validate a date and return it in ISO format."""
         if not date_str:
-            return datetime.today().date().strftime("%m/%d/%Y")  # Default to today's date if empty
+            return datetime.today().date().strftime("%Y-%m-%d")
 
-        try:
-            return datetime.strptime(date_str, '%m/%d/%Y').date().strftime("%m/%d/%Y")
-        except ValueError:
-            raise ValueError("Date format is not valid. It should be in YYYY/MM/DD format.")
+        for date_format in ("%Y-%m-%d", "%m/%d/%Y"):
+            try:
+                parsed_date = datetime.strptime(date_str, date_format)
+                return parsed_date.date().strftime("%Y-%m-%d")
+            except ValueError:
+                continue
+
+        raise ValueError("Date format must be YYYY-MM-DD or MM/DD/YYYY.")
 
     def add_expense(self, amount, category, date_str, description):
-        """
-        Add an expense to the model after validating inputs and date format.
-        
-        Args:
-        - amount (str or float): Amount of the expense.
-        - category (str): Category of the expense.
-        - date_str (str): Date of the expense in format '%Y-%m-%d'.
-        - description (str): Description of the expense.
-        
-        Raises:
-        - ValueError: If any required field is missing or if amount is not numeric.
-        - Exception: For any unexpected errors during the addition of expense.
-        """
-        try:
-            # Validate inputs
-            if not (amount and category and date_str):
-                raise ValueError("All fields except description are required.")
+        """Validate expense details and save the expense."""
+        if not (amount and category and date_str):
+            raise ValueError("Amount, category, and date are required.")
 
-            # Convert amount to float (if it's not already)
-            amount = float(amount)
+        amount = float(amount)
+        expense_date = self.validate_date(date_str)
+        self.model.add_expense(amount, category, expense_date, description)
 
-            # Validate and normalize date format
-            date = self.validate_date(date_str)
-
-            # Add expense to model
-            self.model.add_expense(amount, category, date, description)
-
-        except ValueError as ve:
-            print(f"Error adding expense: {ve}")
-            raise  # Re-raise the ValueError to propagate it to the caller (e.g., the GUI)
-
-        except Exception as e:
-            print(f"Error adding expense: {e}")
-            raise Exception("Unexpected error occurred while adding expense.")
-
-
-        
     def get_expenses(self):
+        """Return saved expenses, or an empty list after a database error."""
         try:
             return self.model.get_expenses()
-        except Exception as e:
-            print(f"Error getting expenses: {e}")
+        except sqlite3.Error:
             return []
-        
+
     def get_expenses_charts(self):
+        """Return expense rows used to build reports."""
         try:
             return self.model.get_expenses_charts()
-        except Exception as e:
-            print(f"Error getting expenses: {e}")
+        except sqlite3.Error:
             return []
 
     def get_categories(self):
+        """Return saved categories, or an empty list after a database error."""
         try:
             return self.model.get_categories()
-        except Exception as e:
-            print(f"Error getting categories: {e}")
+        except sqlite3.Error:
             return []
 
     def add_category(self, category):
+        """Add a category, reporting expected database failures."""
         try:
             self.model.add_category(category)
-        except Exception as e:
-            print(f"Error adding category: {e}")
+        except sqlite3.Error:
+            return
 
     def remove_category(self, category):
+        """Remove a category, reporting expected database failures."""
         try:
             self.model.remove_category(category)
-        except Exception as e:
-            print(f"Error removing category: {e}")
-            
+        except sqlite3.Error:
+            return
+
     def load_expenses(self):
+        """Return expenses for the view, or an empty list on database failure."""
         try:
             return self.model.get_expenses()
-        except Exception as e:
-            print(f"Error loading expenses: {e}")
+        except sqlite3.Error:
             return []
 
-    def filter_expenses(self, category, start_date, end_date, min_amount, max_amount):
+    def filter_expenses(
+        self, category, start_date, end_date, min_amount, max_amount
+    ):
+        """Filter expenses by category, date range, and amount range."""
         try:
             expenses = self.model.get_expenses()
 
-            # Filter by category
             if category and category != 'All':
-                expenses = [expense for expense in expenses if expense[2] == category]
+                expenses = [expense for expense in expenses if expense[1] == category]
 
-            # Filter by date range
             if start_date:
                 start_date = datetime.strptime(start_date, '%Y-%m-%d')
-                expenses = [expense for expense in expenses if datetime.strptime(expense[3], '%Y-%m-%d') >= start_date]
+                expenses = [
+                    expense for expense in expenses
+                    if datetime.strptime(expense[2], '%Y-%m-%d') >= start_date
+                ]
 
             if end_date:
                 end_date = datetime.strptime(end_date, '%Y-%m-%d')
-                expenses = [expense for expense in expenses if datetime.strptime(expense[3], '%Y-%m-%d') <= end_date]
+                expenses = [
+                    expense for expense in expenses
+                    if datetime.strptime(expense[2], '%Y-%m-%d') <= end_date
+                ]
 
-            # Filter by amount range
             if min_amount:
-                expenses = [expense for expense in expenses if expense[1] >= float(min_amount)]
+                expenses = [expense for expense in expenses
+                            if expense[0] >= float(min_amount)]
 
             if max_amount:
-                expenses = [expense for expense in expenses if expense[1] <= float(max_amount)]
+                expenses = [expense for expense in expenses
+                            if expense[0] <= float(max_amount)]
 
             return expenses
-        except Exception as e:
-            print(f"Error filtering expenses: {e}")
+        except sqlite3.Error:
             return []
 
     def plot_expense_distribution(self):
+        """Generate the expense distribution report."""
         try:
             return self.model.plot_expense_distribution()
-        except Exception as e:
-            print(f"Error plotting expense distribution: {e}")
+        except sqlite3.Error:
+            return None
 
     def plot_monthly_expenses(self):
+        """Generate the monthly expenses report."""
         try:
             return self.model.plot_monthly_expenses()
-        except Exception as e:
-            print(f"Error plotting monthly expenses: {e}")
+        except sqlite3.Error:
+            return None
 
     def export_to_csv(self, file_path):
+        """Export expenses to a CSV file."""
         try:
             return self.model.export_to_csv(file_path)
-        except Exception as e:
-            print(f"Error exporting to CSV: {e}")
+        except sqlite3.Error:
+            return None
 
     def export_to_pdf(self, file_path):
+        """Export expenses to a PDF file."""
         try:
             return self.model.export_to_pdf(file_path)
-        except Exception as e:
-            print(f"Error exporting to PDF: {e}")
+        except sqlite3.Error:
+            return None
 
     def export_to_sqlite(self, file_path):
+        """Export expenses to another SQLite database."""
         try:
             return self.model.export_to_sqlite(file_path)
-        except Exception as e:
-            print(f"Error exporting to SQLite: {e}")
+        except sqlite3.Error:
+            return None

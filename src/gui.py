@@ -2,8 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from preferences import Preferences
 from controller import ExpenseTrackerController
-from datetime import datetime
-from tkcalendar import Calendar, DateEntry
+from tkcalendar import DateEntry
 import pandas as pd
 import matplotlib.pyplot as plt
 from ttkthemes import ThemedStyle
@@ -273,20 +272,16 @@ class ExpenseTrackerView:
             self.category_listbox.insert(tk.END, category)
 
     def add_expense(self):
+        """Validate the description and submit the form values."""
         amount = self.amount_entry.get().strip()
         category = self.category_var.get()
         date = self.date_entry.get_date().strftime("%Y-%m-%d")
         description = self.description_entry.get("1.0", "end-1c").strip()  # for Text widget
-        # description = self.description_entry.get().strip()  # for Entry widget
 
         try:
-            # Validate inputs
-            if not (amount and category and date and description):
-                raise ValueError("All fields except description are required.")
+            if not description:
+                raise ValueError("Description is required.")
 
-            amount = float(amount)  # Convert amount to float
-
-            # Add expense using controller
             self.controller.add_expense(amount, category, date, description)
             messagebox.showinfo("Success", "Expense added successfully!")
             self.clear_entries()
@@ -304,6 +299,7 @@ class ExpenseTrackerView:
             self.tree.insert("", tk.END, values=expense)
 
     def filter_expenses(self):
+        """Apply the selected filters and display matching expenses."""
         category = self.filter_category_var.get()
         start_date = self.start_date_entry.get_date().strftime('%Y-%m-%d')
         end_date = self.end_date_entry.get_date().strftime('%Y-%m-%d')
@@ -311,24 +307,12 @@ class ExpenseTrackerView:
         max_amount = self.max_amount_entry.get()
 
         try:
-            # Convert date strings to datetime objects if they are not empty
-            if start_date:
-                start_date = datetime.strptime(start_date, "%Y-%m-%d").date().strftime("%Y-%m-%d")
-            if end_date:
-                end_date = datetime.strptime(end_date, "%Y-%m-%d").date().strftime("%Y-%m-%d")
-
-            # Call controller method with formatted dates
-            filtered_expenses = self.controller.filter_expenses(category, start_date, end_date, min_amount, max_amount)
-
-            # Update GUI with filtered results (assuming implementation)
-
-        except ValueError as e:
-            print(f"ValueError in filter_expenses: {e}")
-            # Handle error appropriately in your GUI
-
-        except Exception as e:
-            print(f"Exception in filter_expenses: {e}")
-            # Handle unexpected errors
+            filtered_expenses = self.controller.filter_expenses(
+                category, start_date, end_date, min_amount, max_amount
+            )
+            self.display_filtered_expenses(filtered_expenses)
+        except ValueError as error:
+            messagebox.showerror("Error", str(error))
 
     def display_filtered_expenses(self, expenses):
         self.clear_filtered_tree()
